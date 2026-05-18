@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Riemann Sum Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f13;
+    --surface: #18181f;
+    --surface2: #21212b;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #e8e8f0;
+    --muted: #8b8b9e;
+    --hint: #55556a;
+    --blue: #5b9cf6;
+    --blue-dim: rgba(91,156,246,0.15);
+    --teal: #3ecf8e;
+    --teal-dim: rgba(62,207,142,0.12);
+    --coral: #f06a50;
+    --coral-dim: rgba(240,106,80,0.12);
+    --red-ax: #f06a50;
+    --green-ax: #3ecf8e;
+    --blue-ax: #5b9cf6;
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: rgba(15,15,19,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 10;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #5b9cf6 0%, #3ecf8e 100%);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .badge {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+
+  .hero {
+    margin-bottom: 28px;
+  }
+
+  .hero h1 {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .hero p {
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .hero p code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: var(--surface2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--teal);
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .controls-bar {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .fn-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .fn-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--muted);
+    white-space: nowrap;
+    min-width: 60px;
+  }
+
+  #fni {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    color: var(--text);
+    transition: border-color .15s;
+    outline: none;
+  }
+
+  #fni:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-dim); }
+
+  .error-msg {
+    font-size: 12px;
+    color: var(--coral);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 16px;
+    margin-top: -14px;
+    margin-bottom: 10px;
+    padding-left: 72px;
+  }
+
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+  }
+
+  .ctrl-section-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--hint);
+    margin-bottom: 12px;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .slider-label {
+    font-size: 12px;
+    color: var(--muted);
+    min-width: 62px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    outline: none;
+    border: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--blue);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+    transition: transform .1s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  input[type="range"]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--blue); cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+
+  .slider-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    min-width: 44px;
+    text-align: right;
+  }
+
+  .options-col select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+    cursor: pointer;
+    margin-bottom: 14px;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .options-col select:focus { border-color: var(--blue); }
+
+  .result-card {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+
+  .result-label {
+    font-size: 11px;
+    color: var(--hint);
+    margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .result-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--blue);
+    letter-spacing: -0.02em;
+  }
+
+  .result-sub {
+    font-size: 11px;
+    color: var(--hint);
+    margin-top: 3px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  #canvas-wrap {
+    position: relative;
+    width: 100%;
+    height: 480px;
+    background: #0a0a0f;
+  }
+
+  #canvas-wrap canvas { display: block; }
+
+  .canvas-hint {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15,15,19,0.75);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .ax-dot { display:inline-block; width:8px; height:3px; border-radius:2px; margin-right:4px; vertical-align:middle; }
+
+  .legend-row {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+
+  .examples {
+    margin-top: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .examples-label {
+    font-size: 12px;
+    color: var(--hint);
+  }
+
+  .example-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 5px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--teal);
+    cursor: pointer;
+    transition: all .15s;
+  }
+
+  .example-btn:hover {
+    background: var(--teal-dim);
+    border-color: var(--teal);
+    color: var(--teal);
+  }
+
+  footer {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--hint);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">∫∫</div>
+    Multivariable Riemann Sum Calculator v1.0.4
+  </div>
+  <span class="badge">Double Integral (Triple Integral Coming Never)</span>
+</header>
+
+<main>
+  <div class="hero">
+    <h1>3D Riemann Sum</h1>
+    <p>Approximate <code>∬ f(x,y) dA</code> the volume under a surface with this stupidly glitchy nested riemann sum. I know it looks like trash rn but i only had 3 days. Multivariable calculus is extremely important and you have to learn it in the first semester of AB and BC or you fail. (p.s. Sophiane's dumb ahh doesn't deserve to be valedictorian) </p>
+  </div>
+
+  <div class="panel">
+    <div class="controls-bar">
+      <div class="fn-row">
+        <span class="fn-label">f(x, y) =</span>
+        <input type="text" id="fni" value="sin(x) * cos(y)" autocomplete="off" spellcheck="false" placeholder="e.g. x^2 + y^2">
+      </div>
+      <div class="error-msg" id="ferr"></div>
+
+      <div class="controls-grid">
+        <div>
+          <div class="ctrl-section-title">x bounds [a, b]</div>
+          <div class="slider-row">
+            <span class="slider-label">from a</span>
+            <input type="range" id="xa" min="-6" max="6" step=".25" value="-3">
+            <span class="slider-val" id="xav">-3.00</span>
+          </div>
+          <div class="slider-row">
+            <span class="slider-label">to b</span>
+            <input type="range" id="xb" min="-6" max="6" step=".25" value="3">
+            <span class="slider-val" id="xbv">3.00</span>
+          </div>
+          <div class="slider-row" style="margin-top:8px">
+            <span class="slider-label">steps m</span>
+            <input type="range" id="slm" min="1" max="24" step="1" value="8">
+            <span class="slider-val" id="slmv">8</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="ctrl-section-title">y bounds [c, d]</div>
+          <div class="slider-row">
+            <span class="slider-label">from c</span>
+            <input type="range" id="ya" min="-6" max="6" step=".25" value="-3">
+            <span class="slider-val" id="yav">-3.00</span>
+          </div>
+          <div class="slider-row">
+            <span class="slider-label">to d</span>
+            <input type="range" id="yb" min="-6" max="6" step=".25" value="3">
+            <span class="slider-val" id="ybv">3.00</span>
+          </div>
+          <div class="slider-row" style="margin-top:8px">
+            <span class="slider-label">steps n</span>
+            <input type="range" id="sln" min="1" max="24" step="1" value="8">
+            <span class="slider-val" id="slnv">8</span>
+          </div>
+        </div>
+
+        <div class="options-col">
+          <div class="ctrl-section-title">options</div>
+          <select id="rule">
+            <option value="mid">Midpoint rule</option>
+            <option value="left">Left corner rule</option>
+            <option value="right">Right corner rule</option>
+          </select>
+          <div class="result-card">
+            <div class="result-label">∬_R f(x,y) dA ≈</div>
+            <div class="result-value" id="sout">—</div>
+            <div class="result-sub" id="mout">— prisms</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="canvas-wrap">
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-swatch" style="background:#3ecf8e;opacity:.6"></div>surface f(x,y)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#5b9cf6"></div>positive prisms</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#f06a50"></div>negative prisms</div>
+      </div>
+      <div class="canvas-hint">
+        <span><span class="ax-dot" style="background:#f06a50"></span>x axis</span>
+        <span><span class="ax-dot" style="background:#3ecf8e"></span>y axis</span>
+        <span><span class="ax-dot" style="background:#5b9cf6"></span>z axis</span>
+        <span style="border-left:1px solid rgba(255,255,255,.12);padding-left:12px">drag to rotate · scroll to zoom</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="examples">
+    <span class="examples-label">Best looking functions:</span>
+    <button class="example-btn" onclick="setFn('sin(x) * cos(y)')">sin(x)cos(y)</button>
+    <button class="example-btn" onclick="setFn('x^2 + y^2')">x² + y²</button>
+    <button class="example-btn" onclick="setFn('exp(-x^2 - y^2)')">e^(−x²−y²)</button>
+    <button class="example-btn" onclick="setFn('x * y')">xy</button>
+    <button class="example-btn" onclick="setFn('sin(sqrt(x^2 + y^2))')">sin(√(x²+y²))</button>
+    <button class="example-btn" onclick="setFn('cos(x) + sin(y)')">cos(x)+sin(y)</button>
+  </div>
+
+  <footer>
+    idc if this is glitchy af i better get bonus points Zhang i wrote 750 lines of html for ts.<br>btw ts might be completely inaccurate sometimes and im too lazy to double check every function on desmos
+  </footer>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.1/math.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script>
+const cont = document.getElementById('canvas-wrap');
+let compiledFn = null, objs = [];
+
+function resize() {
+  const W = cont.clientWidth, H = cont.clientHeight;
+  renderer.setSize(W, H);
+  camera.aspect = W / H;
+  camera.updateProjectionMatrix();
+}
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x0a0a0f, 1);
+cont.insertBefore(renderer.domElement, cont.firstChild);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(42, cont.clientWidth / cont.clientHeight, 0.01, 1000);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const dl1 = new THREE.DirectionalLight(0xffffff, 1.0); dl1.position.set(8, 15, 8); scene.add(dl1);
+const dl2 = new THREE.DirectionalLight(0xffffff, 0.3); dl2.position.set(-6, 4, -8); scene.add(dl2);
+
+let theta = 0.75, phi = 1.05, radius = 20;
+let camTgt = new THREE.Vector3(0, 2, 0);
+let isDrag = false, px = 0, py = 0;
+
+function updateCam() {
+  camera.position.set(
+    camTgt.x + radius * Math.sin(phi) * Math.sin(theta),
+    camTgt.y + radius * Math.cos(phi),
+    camTgt.z + radius * Math.sin(phi) * Math.cos(theta)
+  );
+  camera.lookAt(camTgt);
+}
+updateCam();
+
+const cvs = renderer.domElement;
+cvs.style.width = '100%';
+cvs.style.height = '100%';
+
+cvs.addEventListener('mousedown', e => { isDrag = true; px = e.clientX; py = e.clientY; cvs.style.cursor = 'grabbing'; });
+window.addEventListener('mouseup', () => { isDrag = false; cvs.style.cursor = 'grab'; });
+cvs.style.cursor = 'grab';
+window.addEventListener('mousemove', e => {
+  if (!isDrag) return;
+  theta -= (e.clientX - px) * 0.012;
+  phi = Math.max(0.05, Math.min(Math.PI - 0.05, phi + (e.clientY - py) * 0.012));
+  px = e.clientX; py = e.clientY;
+  updateCam();
+});
+cvs.addEventListener('wheel', e => {
+  radius = Math.max(4, Math.min(60, radius + e.deltaY * 0.04));
+  updateCam(); e.preventDefault();
+}, { passive: false });
+
+let lastT = null;
+cvs.addEventListener('touchstart', e => { lastT = e.touches[0]; }, { passive: true });
+cvs.addEventListener('touchmove', e => {
+  if (e.touches.length === 1 && lastT) {
+    theta -= (e.touches[0].clientX - lastT.clientX) * 0.015;
+    phi = Math.max(0.05, Math.min(Math.PI - 0.05, phi + (e.touches[0].clientY - lastT.clientY) * 0.015));
+    lastT = e.touches[0]; updateCam();
+  }
+  e.preventDefault();
+}, { passive: false });
+
+function tryParse(expr) {
+  try {
+    const c = math.compile(expr);
+    const r = c.evaluate({ x: 0, y: 0 });
+    if (typeof r !== 'number' && !(r && r.re !== undefined)) throw new Error('not numeric');
+    compiledFn = c;
+    document.getElementById('ferr').textContent = '';
+    return true;
+  } catch (e) {
+    document.getElementById('ferr').textContent = '⚠ ' + String(e.message).split('\n')[0].slice(0, 80);
+    compiledFn = null; return false;
+  }
+}
+
+function evalFn(x, y) {
+  if (!compiledFn) return 0;
+  try {
+    const v = compiledFn.evaluate({ x, y });
+    const n = typeof v === 'number' ? v : (v && v.re != null ? v.re : 0);
+    return isFinite(n) ? n : 0;
+  } catch { return 0; }
+}
+
+function clearObjs() {
+  objs.forEach(o => {
+    scene.remove(o);
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) {
+      if (Array.isArray(o.material)) o.material.forEach(m => m.dispose());
+      else o.material.dispose();
+    }
+  });
+  objs = [];
+}
+
+function add(o) { scene.add(o); objs.push(o); return o; }
+
+function makeLine(from, to, col) {
+  return add(new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([from, to]),
+    new THREE.LineBasicMaterial({ color: col })
+  ));
+}
+
+function buildScene() {
+  if (!compiledFn) return;
+  clearObjs();
+
+  const xa = +document.getElementById('xa').value;
+  const xb = +document.getElementById('xb').value;
+  const ya = +document.getElementById('ya').value;
+  const yb = +document.getElementById('yb').value;
+  const m = +document.getElementById('slm').value;
+  const n = +document.getElementById('sln').value;
+  const rule = document.getElementById('rule').value;
+  if (xa >= xb || ya >= yb) return;
+
+  const cx = (xa + xb) / 2, cy = (ya + yb) / 2;
+  const dw = xb - xa, dh = yb - ya;
+  const xyS = 10 / Math.max(dw, dh);
+
+  const NS = 28; let zlo = 0, zhi = 0;
+  for (let i = 0; i <= NS; i++) for (let j = 0; j <= NS; j++) {
+    const z = evalFn(xa + dw * i / NS, ya + dh * j / NS);
+    zlo = Math.min(zlo, z); zhi = Math.max(zhi, z);
+  }
+  if (zhi - zlo < 0.01) { zhi += 0.5; zlo -= 0.5; }
+  const zS = 6 / (zhi - zlo), base = -zlo * zS;
+
+  const tx = x => (x - cx) * xyS;
+  const tz = y => -(y - cy) * xyS;
+  const ty = z => (z - zlo) * zS;
+
+  // Surface
+  const RES = 48; const sv = [], si = [];
+  for (let j = 0; j <= RES; j++) for (let i = 0; i <= RES; i++) {
+    const x = xa + dw * i / RES, y = ya + dh * j / RES;
+    sv.push(tx(x), ty(evalFn(x, y)), tz(y));
+  }
+  for (let j = 0; j < RES; j++) for (let i = 0; i < RES; i++) {
+    const a = j * (RES + 1) + i, b = a + 1, c = a + (RES + 1), d = c + 1;
+    si.push(a, c, b, b, c, d);
+  }
+  const sgeo = new THREE.BufferGeometry();
+  sgeo.setAttribute('position', new THREE.Float32BufferAttribute(sv, 3));
+  sgeo.setIndex(si); sgeo.computeVertexNormals();
+
+  add(new THREE.Mesh(sgeo, new THREE.MeshPhongMaterial({
+    color: 0x3ecf8e, transparent: true, opacity: 0.22, side: THREE.DoubleSide, shininess: 80
+  })));
+  add(new THREE.Mesh(sgeo.clone(), new THREE.MeshBasicMaterial({
+    color: 0x3ecf8e, wireframe: true, transparent: true, opacity: 0.14
+  })));
+
+  // Riemann boxes
+  const dx = dw / m, dy = dh / n; let rsum = 0;
+  for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
+    const x0 = xa + i * dx, y0 = ya + j * dy;
+    let smx, smy;
+    if (rule === 'left') { smx = x0; smy = y0; }
+    else if (rule === 'right') { smx = x0 + dx; smy = y0 + dy; }
+    else { smx = x0 + dx / 2; smy = y0 + dy / 2; }
+
+    const h = evalFn(smx, smy);
+    rsum += h * dx * dy;
+    if (Math.abs(h) < 1e-12) continue;
+
+    const bw = dx * xyS * 0.9, bd = dy * xyS * 0.9, bh = Math.abs(h) * zS;
+    const bgeo = new THREE.BoxGeometry(bw, bh, bd);
+    const pos = h > 0;
+
+    const mesh = new THREE.Mesh(bgeo, new THREE.MeshPhongMaterial({
+      color: pos ? 0x5b9cf6 : 0xf06a50,
+      transparent: true, opacity: 0.78, shininess: 40
+    }));
+    const egeo = new THREE.EdgesGeometry(bgeo);
+    const edges = new THREE.LineSegments(egeo, new THREE.LineBasicMaterial({
+      color: pos ? 0x1a4a8a : 0x8a2a10, transparent: true, opacity: 0.9
+    }));
+
+    const bx = tx(x0 + dx / 2), bz = tz(y0 + dy / 2);
+    const by = pos ? base + bh / 2 : base - bh / 2;
+    mesh.position.set(bx, by, bz);
+    edges.position.copy(mesh.position);
+    add(mesh); add(edges);
+  }
+
+  // Grid
+  const gs = Math.max(dw, dh) * xyS;
+  const grid = new THREE.GridHelper(gs * 1.3, 10, 0x2a2a3a, 0x1e1e2e);
+  grid.position.y = base; add(grid);
+
+  // z=0 plane
+  const zpg = new THREE.PlaneGeometry(gs * 1.25, gs * 1.25);
+  const zpm = new THREE.Mesh(zpg, new THREE.MeshBasicMaterial({
+    color: 0x3a3a5a, transparent: true, opacity: 0.12, side: THREE.DoubleSide
+  }));
+  zpm.rotation.x = -Math.PI / 2; zpm.position.y = base; add(zpm);
+
+  // Axes
+  
+// x-axis (xa → xb)
+makeLine(
+  new THREE.Vector3(tx(xa), base, 0),
+  new THREE.Vector3(tx(xb), base, 0),
+  0xf06a50
+);
+
+// y-axis (ya → yb)
+makeLine(
+  new THREE.Vector3(0, base, tz(ya)),
+  new THREE.Vector3(0, base, tz(yb)),
+  0x3ecf8e
+);
+
+// z-axis (I FUCKING HATE MY LIFE)
+makeLine(
+  new THREE.Vector3(0, base, 0),
+  new THREE.Vector3(0, base + (zhi - zlo) * zS + 0.7, 0),
+  0x5b9cf6
+);
+
+  // Tick marks
+  const tmat = new THREE.LineBasicMaterial({ color: 0x444455, transparent: true, opacity: 0.8 });
+  const xStep = dw / 4, yStep = dh / 4;
+  for (let i = 0; i <= 4; i++) {
+    const xt = tx(xa + xStep * i);
+    add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(xt, base - 0.18, 0), new THREE.Vector3(xt, base + 0.18, 0)]), tmat));
+    const yt = tz(ya + yStep * i);
+    add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.18, base, yt), new THREE.Vector3(0.18, base, yt)]), tmat));
+  }
+
+  document.getElementById('sout').textContent = rsum.toFixed(5);
+  document.getElementById('mout').textContent = `${m} × ${n} = ${m * n} prisms`;
+
+  camTgt.set(0, base + (zhi - zlo) * zS * 0.35, 0);
+  updateCam();
+}
+
+(function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); })();
+
+function wire(id, outId, fmt) {
+  const el = document.getElementById(id), out = outId ? document.getElementById(outId) : null;
+  if (out) out.textContent = fmt(el.value);
+  el.addEventListener('input', () => { if (out) out.textContent = fmt(el.value); buildScene(); });
+}
+wire('xa', 'xav', v => (+v).toFixed(2));
+wire('xb', 'xbv', v => (+v).toFixed(2));
+wire('ya', 'yav', v => (+v).toFixed(2));
+wire('yb', 'ybv', v => (+v).toFixed(2));
+wire('slm', 'slmv', v => +v);
+wire('sln', 'slnv', v => +v);
+wire('rule', null, v => v);
+
+let dbt;
+document.getElementById('fni').addEventListener('input', () => {
+  clearTimeout(dbt);
+  dbt = setTimeout(() => { if (tryParse(document.getElementById('fni').value)) buildScene(); }, 380);
+});
+
+function setFn(expr) {
+  document.getElementById('fni').value = expr;
+  if (tryParse(expr)) buildScene();
+}
+
+window.setFn = setFn;
+window.addEventListener('resize', resize);
+resize();
+tryParse('sin(x) * cos(y)');
+buildScene();
+</script>
+</body>
+</html>
